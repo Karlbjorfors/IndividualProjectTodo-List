@@ -19,20 +19,34 @@
  *3.Edit Project
  *4.List Projects~ getProjects()
 */
-public class Project
+using System.Text.Json;
+
+public abstract class Item
 {
-    public Project(string name, string description, string status)
+    public string Name { get; set; }
+    public string Description { get; set; }
+    protected Item(string name, string description)
     {
         Name = name;
         Description = description;
-        Status = status;
     }
+    public void EditItem(string name, string description)
+    {
+        Name = name;
+        Description = description;
+    }
+}
 
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public string Status { get; set; }
-    public List<TodoList> { get; set; } = new List<TodoList>();
-        
+
+public class Project : Item
+{
+    public string status { get; set; }
+    public List<TodoList> todoList { get; set; } = new List<TodoList>();
+    public Project(string name, string description, string status)
+        : base(name, description)
+    {
+        Status = status;
+    }        
     public void AddTodoList(TodoList todoList)
     {
         Todolist.Add(todoList);
@@ -41,15 +55,17 @@ public class Project
     {
         TodoList.Remove(todoList);
     }
-    public void EditProject(string name, string description, string status)
+    /*public void EditProject(string name, string description, string status)
+   
     {
     Name = name;
     Description = description;
     Status = status;
     }
+    */
     public List<TodoList> GetTodoLists()
     {
-    return TodoLists();
+    return TodoLists;
     }
 }
 
@@ -60,34 +76,27 @@ public class Project
  *3.Edit TodoList
  *4.List TodoLists~ getTodoLists()
 */
-public class TodoList
+public class TodoList : Item
 {
-    public TodoList(string name, string description, string projectName, List<TodoTask> tasks)
-    {
-        Name = name;
-        Description = description;
-        ProjectName = projectName;
-        Tasks = tasks;
-    }
-
-    public string Name { get; set; }
-    public string Description { get; set; }
     public string ProjectName { get; set; }
     public List<TodoTask> Tasks { get; set; } = new List<TodoTask>();
 
-    public void AddTast(TodoTask task)
+    public TodoList(string name, string description, string projectName)
+        : base(name, description)
+    {
+        ProjectName = projectName;
+    }
+
+    public void AddTask(TodoTask task)
     {
         Tasks.Add(task);
     }
+
     public void RemoveTask(TodoTask task)
     {
         Tasks.Remove(task);
     }
-    public void EditTodoList(string name, string description)
-    {
-        Name = name;
-        Description = description;
-    }
+
     public List<TodoTask> GetTasks()
     {
         return Tasks;
@@ -101,29 +110,25 @@ public class TodoList
  *3.Remove Task
  *4.List TodoTasks~ getTodoTasks()
 */
-public class TodoTask
+public class TodoTask : Item
 {
+    public DateTime DueDate { get; set; }
+    public string Status { get; set; }
+    public string ProjectName { get; set; }
+    public string TodoListName { get; set; }
+
     public TodoTask(string name, string description, DateTime dueDate, string status, string projectName, string todoListName)
+        : base(name, description)
     {
-        Name = name;
-        Description = description;
         DueDate = dueDate;
         Status = status;
         ProjectName = projectName;
         TodoListName = todoListName;
     }
 
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public DateTime DueDate { get; set; }
-    public string Status { get; set; }
-    public string ProjectName{ get; set; }
-    public string TodoListName {  get; set; }
-
     public void EditTask(string name, string description, DateTime dueDate, string status)
     {
-        Name = name;
-        Description = description;
+        EditItem(name, description);
         DueDate = dueDate;
         Status = status;
     }
@@ -139,29 +144,69 @@ public class Program
 
     public static void Main(string[] args)
     {
-        //Main logic
+        // Main logic
     }
 
     public static void CreateProject(string name, string description, string status)
     {
-        var project = new Project
-        {
-            Name = name,
-            Description = description,
-            Status = status
-        };
-        projects.Add(project); 
+        var project = new Project(name, description, status);
+        projects.Add(project);
     }
+
     public static void RemoveProject(Project project)
     {
         projects.Remove(project);
     }
+
     public static void EditProject(Project project, string name, string description, string status)
     {
-        project.EditProject(name, description, status);
+        project.EditItem(name, description);
+        project.Status = status;
     }
+
     public static List<Project> GetProjects()
     {
         return projects;
     }
+    //Save to file
+    public static void SaveProjectsToFile(string filePath)
+    {
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        string jsonString = JsonSerializer.Serialize(projects, options);
+        File.WriteAllText(filePath, jsonString);
+    }
+    //Load from file
+    public static void LoadProjectsFromFile(string filePath)
+    {
+        if (File.Exists(filePath))
+        {
+            string jsonString = File.ReadAllText(filePath);
+            projects = JsonSerializer.Deserialize<List<Project>>(jsonString) ?? new List<Project>();
+        }
+        else
+        {
+            projects = new List<Project>();
+        }
+    }
 }
+//Save to json file + Load from jsonfile
+/*
+ * public static void SaveProjectsToFile(string filePath)//save projects to a file Method
+{
+    var options = new JsonSerializerOptions { WriteIndented = true };
+    string jsonString = JsonSerializer.Serialize(projects, options);
+    File.WriteAllText(filePath, jsonString);
+}
+public static void LoadProjectsFromFile(string filePath)//load projects from a file Method
+{
+    if (File.Exists(filePath))
+    {
+        string jsonString = File.ReadAllText(filePath);
+        projects = JsonSerializer.Deserialize<List<Project>>(jsonString) ?? new List<Project>());
+    }
+    else
+    {
+        projects = new List<Project>();
+    }
+}
+*/
