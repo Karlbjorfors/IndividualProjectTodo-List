@@ -1,4 +1,6 @@
-﻿namespace IndividualProjectTodo_List
+﻿using System;
+
+namespace IndividualProjectTodo_List
 {
     public class TodoTask : Item
     {

@@ -1,44 +1,87 @@
-﻿//TodoList Application
+﻿using System;
+using System.Collections.Generic;
 
-//Functions
-/* create a project
- * Create a todoList inside project
- * Create Tasks inside a todoList
- * update a project, todoList, task
- * remove a project, todoList, task
- * save project(s) to a .json/txt file
- * Quit
- */
+namespace IndividualProjectTodo_List
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            var taskService = new TaskService();
+            taskService.LoadProjectsFromFile();
 
-//Project class -Manages projects
-/*name, description, status
- *1.Create a project
- *2.Remove a project
- *3.Edit Project
- *4.List Projects~ getProjects()
-*/
+            while (true)
+            {
+                ShowMenu();
+                var choice = Console.ReadLine();
 
-//TodoList class- manages TodoLists
-/*1.Create a TodoList in a project
- * name, description, projectName
- *2.Remove a TodoList
- *3.Edit TodoList
- *4.List TodoLists~ getTodoLists()
-*/
+                switch (choice)
+                {
+                    case "1":
+                        taskService.ListTasks();
+                        break;
+                    case "2":
+                        taskService.AddTask();
+                        break;
+                    case "3":
+                        EditTaskMenu(taskService);
+                        break;
+                    case "4":
+                        taskService.SaveProjectsToFile();
+                        Console.WriteLine("Tasks saved. Goodbye!");
+                        return;
+                    case "5":
+                        taskService.AddProject();
+                        break;
+                    case "6":
+                        taskService.EditProject();
+                        break;
+                    case "7":
+                        taskService.RemoveProject();
+                        break;
+                    default:
+                        Console.WriteLine("Invalid option. Please try again.");
+                        break;
+                }
+            }
+        }
 
-//TodoTask class- manages Tasks
-/*1.Create a Task in a TodoList
- * name, description, dueDate, status, projectName, todoListName
- *2.Edit Task
- *3.Remove Task
- *4.List TodoTasks~ getTodoTasks()
-*/
+        private static void ShowMenu()
+        {
+            Console.WriteLine(">> Welcome to ToDoLy");
+            Console.WriteLine(">> You have X tasks todo and Y tasks are done!");
+            Console.WriteLine(">> Pick an option:");
+            Console.WriteLine("(1) Show Task List (by date or project)");
+            Console.WriteLine("(2) Add New Task");
+            Console.WriteLine("(3) Edit Task (update, mark as done, remove)");
+            Console.WriteLine("(4) Save and Quit");
+            Console.WriteLine("(5) Add New Project");
+            Console.WriteLine("(6) Edit Project");
+            Console.WriteLine("(7) Remove Project");
+        }
 
-//TodoListApplication class
-/*Contains main logic
- *Methods and Functions
- *
- */
+        private static void EditTaskMenu(TaskService taskService)
+        {
+            Console.WriteLine("(1) Edit Task");
+            Console.WriteLine("(2) Mark Task as Done");
+            Console.WriteLine("(3) Remove Task");
+            var choice = Console.ReadLine();
 
-
-//Save to json file + Load from jsonfile
+            switch (choice)
+            {
+                case "1":
+                    taskService.EditTask();
+                    break;
+                case "2":
+                    taskService.MarkTaskAsDone();
+                    break;
+                case "3":
+                    taskService.RemoveTask();
+                    break;
+                default:
+                    Console.WriteLine("Invalid option. Please try again.");
+                    break;
+            }
+        }
+    }
+}

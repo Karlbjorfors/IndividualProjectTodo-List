@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace IndividualProjectTodo_List
 {
@@ -13,5 +9,4 @@ namespace IndividualProjectTodo_List
         void EditProject(Project project, string name, string description, string status);
         List<Project> GetProjects();
     }
-
 }

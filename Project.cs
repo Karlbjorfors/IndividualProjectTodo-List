@@ -1,4 +1,6 @@
-﻿namespace IndividualProjectTodo_List
+﻿using System.Collections.Generic;
+
+namespace IndividualProjectTodo_List
 {
     public class Project : Item
     {

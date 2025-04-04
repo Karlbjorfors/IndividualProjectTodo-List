@@ -1,43 +1,43 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace IndividualProjectTodo_List
 {
-    
-public class TaskService : ITaskService
+    public class TaskService : ITaskService
     {
-        private readonly List<Project> projects;
+        private List<Project> _projects;
+        private const string FilePath = "tasks.json";
 
-        public TaskService(List<Project> projects)
+        public TaskService()
         {
-            this.projects = projects;
+            _projects = new List<Project>();
         }
 
         public void AddTask()
         {
-            var (title, description, dueDate, projectName) = GetTaskDetailsFromUser();
-            var task = new TodoTask(title, description, dueDate, "Pending", projectName, projectName);
-            var project = GetOrCreateProject(projectName);
-            var todoList = GetOrCreateTodoList(project, projectName);
+            var todoList = GetTodoListFromUserInput();
+            if (todoList == null) return;
+
+            var task = GetTaskDetailsFromUserInput(todoList.ProjectName, todoList.Name);
             todoList.AddTask(task);
+            Console.WriteLine("Task added successfully.");
         }
 
         public void EditTask()
         {
-            var (project, todoList, task) = GetTaskFromUser();
+            var task = GetTaskFromUserInput();
             if (task == null) return;
 
-            var (newTitle, newDescription, newDueDate, newStatus) = GetTaskDetailsFromUser();
-            task.EditTask(newTitle, newDescription, newDueDate, newStatus);
-            Console.WriteLine("Task updated successfully.");
+            UpdateTaskDetailsFromUserInput(task);
+            Console.WriteLine("Task edited successfully.");
         }
 
         public void MarkTaskAsDone()
         {
-            var (project, todoList, task) = GetTaskFromUser();
+            var task = GetTaskFromUserInput();
             if (task == null) return;
 
             task.Status = "Done";
@@ -46,138 +46,179 @@ public class TaskService : ITaskService
 
         public void RemoveTask()
         {
-            var (project, todoList, task) = GetTaskFromUser();
+            var task = GetTaskFromUserInput();
             if (task == null) return;
 
+            var todoList = GetTodoListByName(task.ProjectName, task.TodoListName);
             todoList.RemoveTask(task);
             Console.WriteLine("Task removed successfully.");
         }
 
         public void ListTasks()
         {
-            Console.WriteLine("1. Sort by Date");
-            Console.WriteLine("2. Sort by Project");
-            Console.Write("Choose an option: ");
-            var choice = Console.ReadLine();
-
-            List<TodoTask> tasks = GetAllTasks();
-
-            switch (choice)
+            foreach (var project in _projects)
             {
-                case "1":
-                    tasks = tasks.OrderBy(t => t.DueDate).ToList();
-                    break;
-                case "2":
-                    tasks = tasks.OrderBy(t => t.ProjectName).ToList();
-                    break;
-                default:
-                    Console.WriteLine("Invalid option. Listing unsorted tasks.");
-                    break;
+                Console.WriteLine($"Project: {project.Name}");
+                foreach (var todoList in project.TodoLists)
+                {
+                    Console.WriteLine($"\tTodo List: {todoList.Name}");
+                    foreach (var task in todoList.Tasks)
+                    {
+                        Console.WriteLine($"\t\tTask: {task.Name}, Due: {task.DueDate}, Status: {task.Status}");
+                    }
+                }
             }
-
-            foreach (var task in tasks)
-            {
-                string colorCode;
-                string statusMessage = task.Status;
-
-                if (task.Status == "Done")
-                {
-                    colorCode = "\u001b[32m"; // Green
-                }
-                else if (task.DueDate < DateTime.Now.Date)
-                {
-                    colorCode = "\u001b[31m"; // Red
-                    statusMessage = "Too Late";
-                }
-                else
-                {
-                    colorCode = "\u001b[33m"; // Yellow
-                }
-
-                Console.WriteLine($"{colorCode}{task.Name} - {task.Description} - {task.DueDate.ToShortDateString()} - {statusMessage} - {task.ProjectName}\u001b[0m");
-            }
-            Console.WriteLine("Press any key to return to the main menu...");
-            Console.ReadKey();
         }
 
-        // Helper Methods
-        private static (string title, string description, DateTime dueDate, string projectName) GetTaskDetailsFromUser()
+        public void AddProject()
         {
-            Console.Write("Enter task title: ");
-            string title = Console.ReadLine();
-            Console.Write("Enter task description: ");
-            string description = Console.ReadLine();
-            Console.Write("Enter due date (yyyy-mm-dd): ");
-            DateTime dueDate = DateTime.Parse(Console.ReadLine());
-            Console.Write("Enter project name: ");
+            var project = GetProjectDetailsFromUserInput();
+            _projects.Add(project);
+            Console.WriteLine("Project added successfully.");
+        }
+
+        public void EditProject()
+        {
+            var project = GetProjectFromUserInput();
+            if (project == null) return;
+
+            var updatedProject = GetProjectDetailsFromUserInput();
+            project.EditProject(updatedProject.Name, updatedProject.Description, updatedProject.Status);
+            Console.WriteLine("Project edited successfully.");
+        }
+
+        public void RemoveProject()
+        {
+            var project = GetProjectFromUserInput();
+            if (project == null) return;
+
+            _projects.Remove(project);
+            Console.WriteLine("Project removed successfully.");
+        }
+
+        public void SaveProjectsToFile()
+        {
+            var json = JsonSerializer.Serialize(_projects);
+            File.WriteAllText(FilePath, json);
+        }
+
+        public void LoadProjectsFromFile()
+        {
+            if (!File.Exists(FilePath))
+            {
+                _projects = new List<Project>();
+                return;
+            }
+
+            var json = File.ReadAllText(FilePath);
+            _projects = JsonSerializer.Deserialize<List<Project>>(json);
+        }
+
+        private Project GetProjectFromUserInput()
+        {
+            Console.WriteLine("Enter project name:");
             string projectName = Console.ReadLine();
-            return (title, description, dueDate, projectName);
-        }
+            var project = GetProjectByName(projectName);
 
-        private Project GetOrCreateProject(string projectName)
-        {
-            var project = projects.FirstOrDefault(p => p.Name == projectName);
-            if (project == null)
-            {
-                project = new Project(projectName, "", "Active");
-                projects.Add(project);
-            }
-            return project;
-        }
-
-        private TodoList GetOrCreateTodoList(Project project, string todoListName)
-        {
-            var todoList = project.TodoLists.FirstOrDefault(t => t.Name == todoListName);
-            if (todoList == null)
-            {
-                todoList = new TodoList(todoListName, "", project.Name);
-                project.AddTodoList(todoList);
-            }
-            return todoList;
-        }
-
-        private (Project project, TodoList todoList, TodoTask task) GetTaskFromUser()
-        {
-            Console.Write("Enter the project name of the task: ");
-            string projectName = Console.ReadLine();
-            var project = projects.FirstOrDefault(p => p.Name == projectName);
             if (project == null)
             {
                 Console.WriteLine("Project not found.");
-                return (null, null, null);
             }
 
-            Console.Write("Enter the task title: ");
-            string taskTitle = Console.ReadLine();
-            var todoList = project.TodoLists.FirstOrDefault(t => t.Tasks.Any(task => task.Name == taskTitle));
+            return project;
+        }
+
+        private TodoList GetTodoListFromUserInput()
+        {
+            var project = GetProjectFromUserInput();
+            if (project == null) return null;
+
+            Console.WriteLine("Enter todo list name:");
+            string todoListName = Console.ReadLine();
+            var todoList = GetTodoListByName(project, todoListName);
+
             if (todoList == null)
             {
-                Console.WriteLine("Task not found.");
-                return (null, null, null);
+                Console.WriteLine("Todo list not found.");
             }
 
-            var task = todoList.Tasks.FirstOrDefault(t => t.Name == taskTitle);
+            return todoList;
+        }
+
+        private TodoTask GetTaskFromUserInput()
+        {
+            var todoList = GetTodoListFromUserInput();
+            if (todoList == null) return null;
+
+            Console.WriteLine("Enter task name:");
+            string taskName = Console.ReadLine();
+            var task = GetTaskByName(todoList, taskName);
+
             if (task == null)
             {
                 Console.WriteLine("Task not found.");
-                return (null, null, null);
             }
 
-            return (project, todoList, task);
+            return task;
         }
 
-        private List<TodoTask> GetAllTasks()
+        private Project GetProjectDetailsFromUserInput()
         {
-            List<TodoTask> tasks = new List<TodoTask>();
-            foreach (var project in projects)
-            {
-                foreach (var todoList in project.TodoLists)
-                {
-                    tasks.AddRange(todoList.GetTasks());
-                }
-            }
-            return tasks;
+            Console.WriteLine("Enter project name:");
+            string name = Console.ReadLine();
+            Console.WriteLine("Enter project description:");
+            string description = Console.ReadLine();
+            Console.WriteLine("Enter project status:");
+            string status = Console.ReadLine();
+
+            return new Project(name, description, status);
+        }
+
+        private TodoTask GetTaskDetailsFromUserInput(string projectName, string todoListName)
+        {
+            Console.WriteLine("Enter task name:");
+            string taskName = Console.ReadLine();
+            Console.WriteLine("Enter task description:");
+            string taskDescription = Console.ReadLine();
+            Console.WriteLine("Enter due date (yyyy-MM-dd):");
+            DateTime dueDate = DateTime.Parse(Console.ReadLine());
+            Console.WriteLine("Enter task status:");
+            string taskStatus = Console.ReadLine();
+
+            return new TodoTask(taskName, taskDescription, dueDate, taskStatus, projectName, todoListName);
+        }
+
+        private void UpdateTaskDetailsFromUserInput(TodoTask task)
+        {
+            Console.WriteLine("Enter new task description:");
+            string taskDescription = Console.ReadLine();
+            Console.WriteLine("Enter new due date (yyyy-MM-dd):");
+            DateTime dueDate = DateTime.Parse(Console.ReadLine());
+            Console.WriteLine("Enter new task status:");
+            string taskStatus = Console.ReadLine();
+
+            task.EditTask(task.Name, taskDescription, dueDate, taskStatus);
+        }
+
+        private Project GetProjectByName(string projectName)
+        {
+            return _projects.FirstOrDefault(p => p.Name.Equals(projectName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private TodoList GetTodoListByName(Project project, string todoListName)
+        {
+            return project.TodoLists.FirstOrDefault(tl => tl.Name.Equals(todoListName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private TodoList GetTodoListByName(string projectName, string todoListName)
+        {
+            var project = GetProjectByName(projectName);
+            return project?.TodoLists.FirstOrDefault(tl => tl.Name.Equals(todoListName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private TodoTask GetTaskByName(TodoList todoList, string taskName)
+        {
+            return todoList.Tasks.FirstOrDefault(t => t.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase));
         }
     }
-
 }
